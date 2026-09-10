@@ -9,6 +9,7 @@
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063?style=flat&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.63%2B-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Tests](https://img.shields.io/badge/Tests-32%20Passed-10B981?style=flat&logo=pytest&logoColor=white)](https://pytest.org/)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 ---
 
@@ -367,4 +368,4 @@ tests/frontend/test_visualizers.py::test_render_mind_map_construction PASSED [10
 
 ## 📜 License
 
-Distributed under the Apache 2.0 License. Designed and architected for high-reliability multimodal research synthesis.
+Distributed under the **GNU Affero General Public License v3.0 (GNU AGPLv3)**. Designed and architected for high-reliability multimodal research synthesis. See [`LICENSE`](LICENSE) for complete terms and conditions.
