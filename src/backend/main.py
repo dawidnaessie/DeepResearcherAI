@@ -16,6 +16,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.backend.config import settings
 from src.backend.schemas.dashboard import ResearchStudyDashboard
 from src.backend.services.file_service import (
     GeminiFileError,
@@ -28,9 +29,6 @@ from src.backend.services.gemini_service import (
     GeminiRateLimitError,
     generate_study_dashboard,
 )
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -48,14 +46,14 @@ app = FastAPI(
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Global services (instantiated on demand or injected)
-file_service = GeminiFileService()
+file_service = GeminiFileService(api_key=settings.GEMINI_API_KEY)
 
 
 @app.get("/health", tags=["System"])
