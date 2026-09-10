@@ -61,7 +61,7 @@ To run the complete system, open two separate terminal windows in your IDE:
 
 ### Terminal 1: Start the FastAPI Backend
 ```bash
-uvicorn src.backend.main:app --reload --port 8000
+python -m uvicorn src.backend.main:app --reload --port 8000
 ```
 * **API Server:** `http://localhost:8000`
 * **Swagger Documentation:** `http://localhost:8000/docs`
@@ -69,7 +69,7 @@ uvicorn src.backend.main:app --reload --port 8000
 
 ### Terminal 2: Start the Streamlit Frontend
 ```bash
-streamlit run src/frontend/app.py
+python -m streamlit run src/frontend/app.py
 ```
 * **Web UI:** `http://localhost:8501`
 

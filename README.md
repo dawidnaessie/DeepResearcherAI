@@ -239,7 +239,7 @@ The system operates as two concurrent services. Open **two separate terminal win
 
 ### Terminal 1: Launch FastAPI Backend
 ```bash
-uvicorn src.backend.main:app --reload --port 8000
+python -m uvicorn src.backend.main:app --reload --port 8000
 ```
 * **API Service:** `http://localhost:8000`
 * **Swagger Interactive Docs:** `http://localhost:8000/docs`
@@ -247,7 +247,7 @@ uvicorn src.backend.main:app --reload --port 8000
 
 ### Terminal 2: Launch Streamlit Frontend
 ```bash
-streamlit run src/frontend/app.py
+python -m streamlit run src/frontend/app.py
 ```
 * **User Interface:** `http://localhost:8501`
 
@@ -359,7 +359,7 @@ tests/frontend/test_visualizers.py::test_render_mind_map_construction PASSED [10
 * **Symptom:** Warning banner appears in the sidebar.
 * **Remedy:** Start the backend server in a separate terminal:
   ```bash
-  uvicorn src.backend.main:app --port 8000
+  python -m uvicorn src.backend.main:app --port 8000
   ```
   Verify connectivity by accessing `http://localhost:8000/health`.
 
