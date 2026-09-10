@@ -5,15 +5,14 @@ and enforces strict Pydantic JSON schemas for the Research Study Dashboard.
 """
 
 import asyncio
-import logging
+import time
 from typing import Any
 
 from google import genai
 from google.genai import errors, types
 
+from src.backend.core.logger import logger
 from src.backend.schemas.dashboard import ResearchStudyDashboard
-
-logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are a Principal Academic Research Synthesizer and Knowledge Architect.
 Your mission is to perform deep, rigorous multimodal analysis of the provided material and synthesize it into a comprehensive, structured research study dashboard.
@@ -101,19 +100,30 @@ async def generate_study_dashboard(
     )
 
     contents: list[Any] = [file_ref]
+    prompt_summary = user_prompt if user_prompt else "Default comprehensive study dashboard prompt"
     if user_prompt:
         contents.append(f"Research focus & specific user queries:\n{user_prompt}")
     else:
         contents.append("Synthesize this document thoroughly into the complete Research Study Dashboard.")
 
+    file_identifier = getattr(file_ref, "name", str(file_ref))
+    logger.info(
+        "Dispatching Gemini inference request",
+        model=model,
+        file_ref=file_identifier,
+        prompt_preview=prompt_summary[:120],
+        has_custom_prompt=bool(user_prompt),
+    )
+
     delay = initial_backoff
     for attempt in range(1, max_retries + 1):
+        dispatch_start = time.perf_counter()
         try:
             logger.info(
-                "Invoking Gemini model '%s' (attempt %d/%d)...",
-                model,
-                attempt,
-                max_retries,
+                "Calling Gemini generation endpoint",
+                model=model,
+                attempt=attempt,
+                max_retries=max_retries,
             )
 
             # Support both async client.aio.models and synchronous client.models
@@ -131,39 +141,62 @@ async def generate_study_dashboard(
                     config=config,
                 )
 
-            logger.info("Received response from Gemini. Validating schema...")
+            latency_ms = round((time.perf_counter() - dispatch_start) * 1000, 2)
+            logger.info(
+                "Received Gemini inference response",
+                model=model,
+                attempt=attempt,
+                latency_ms=latency_ms,
+                response_chars=len(response.text) if response.text else 0,
+            )
+
             if not response.text:
                 raise GeminiAnalysisError("Gemini returned empty response text.")
 
             # Validate against Pydantic schema
             dashboard = ResearchStudyDashboard.model_validate_json(response.text)
             logger.info(
-                "Successfully generated ResearchStudyDashboard: '%s' (%d nodes, %d flashcards, %d events)",
-                dashboard.title,
-                len(dashboard.nodes),
-                len(dashboard.flashcards),
-                len(dashboard.timeline),
+                "Successfully validated ResearchStudyDashboard",
+                title=dashboard.title,
+                nodes_count=len(dashboard.nodes),
+                flashcards_count=len(dashboard.flashcards),
+                timeline_count=len(dashboard.timeline),
+                total_latency_ms=latency_ms,
             )
             return dashboard
 
         except Exception as exc:
+            latency_ms = round((time.perf_counter() - dispatch_start) * 1000, 2)
             if _is_rate_limit_error(exc):
                 if attempt < max_retries:
                     logger.warning(
-                        "Rate limit (429) hit on attempt %d/%d. Backing off for %.1f seconds...",
-                        attempt,
-                        max_retries,
-                        delay,
+                        "Gemini rate limit (429) hit, retrying with exponential backoff",
+                        model=model,
+                        attempt=attempt,
+                        max_retries=max_retries,
+                        backoff_seconds=delay,
+                        latency_ms=latency_ms,
                     )
                     await asyncio.sleep(delay)
                     delay = min(delay * backoff_factor, max_backoff)
                     continue
-                logger.error("Rate limit retries exhausted after %d attempts.", max_retries)
+                logger.error(
+                    "Gemini rate limit retries exhausted",
+                    model=model,
+                    attempts_made=max_retries,
+                    error=str(exc),
+                )
                 raise GeminiRateLimitError(
                     f"Gemini API rate limit exceeded after {max_retries} retries."
                 ) from exc
 
-            logger.error("Error during Gemini dashboard generation: %s", exc, exc_info=True)
+            logger.error(
+                "Gemini dashboard generation error",
+                model=model,
+                attempt=attempt,
+                latency_ms=latency_ms,
+                error=str(exc),
+            )
             raise GeminiAnalysisError(f"Gemini generation failed: {exc}") from exc
 
     raise GeminiAnalysisError("Unexpected termination of generation retry loop.")

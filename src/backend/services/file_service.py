@@ -7,14 +7,14 @@ polling until files reach the ACTIVE state before inference.
 import asyncio
 from collections.abc import AsyncIterator
 import contextlib
-import logging
 from pathlib import Path
+import time
 from typing import Any
 
 from google import genai
 from google.genai import types
 
-logger = logging.getLogger(__name__)
+from src.backend.core.logger import logger
 
 
 class GeminiFileError(Exception):
@@ -142,49 +142,92 @@ class GeminiFileService:
             GeminiFileProcessingError: If the remote file processing fails.
             GeminiFileTimeoutError: If the file does not become ACTIVE before timeout.
         """
-        logger.info("Uploading file to Gemini Files API: %s", file_path)
+        path_obj = Path(file_path)
+        file_size_bytes = path_obj.stat().st_size if path_obj.exists() else 0
+        file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
+        effective_mime = mime_type or "application/octet-stream"
+        effective_name = display_name or path_obj.name
+
+        upload_start_time = time.perf_counter()
+        logger.info(
+            "Uploading multimodal file to Gemini Files API",
+            file_name=effective_name,
+            file_size_mb=file_size_mb,
+            mime_type=effective_mime,
+            local_path=str(file_path),
+        )
+
         file_resource = await self._upload_raw(
             file_path=file_path,
             mime_type=mime_type,
             display_name=display_name,
         )
+        upload_elapsed_ms = round((time.perf_counter() - upload_start_time) * 1000, 2)
+        initial_state = getattr(file_resource, "state", None)
+
         logger.info(
-            "File uploaded successfully. Remote name: %s, initial state: %s",
-            file_resource.name,
-            getattr(file_resource, "state", None),
+            "File uploaded successfully to Gemini Files API",
+            file_name=effective_name,
+            remote_name=file_resource.name,
+            initial_state=str(initial_state),
+            upload_duration_ms=upload_elapsed_ms,
         )
 
         # If already ACTIVE (e.g., fast image/text uploads), return immediately
-        if _is_active(getattr(file_resource, "state", None)):
-            logger.info("File %s is already ACTIVE. Returning immediately.", file_resource.name)
+        if _is_active(initial_state):
+            logger.info(
+                "File reached ACTIVE state immediately",
+                file_name=effective_name,
+                remote_name=file_resource.name,
+            )
             return file_resource
 
         # Polling loop
         elapsed: float = 0.0
         current_interval = initial_poll_interval
+        iteration: int = 1
 
         while elapsed < timeout_seconds:
-            logger.debug(
-                "Sleeping %.1fs before checking status of %s (elapsed: %.1fs/%.1fs)",
-                current_interval,
-                file_resource.name,
-                elapsed,
-                timeout_seconds,
+            logger.info(
+                "Polling Gemini file processing status",
+                file_name=effective_name,
+                remote_name=file_resource.name,
+                iteration=iteration,
+                poll_interval_seconds=current_interval,
+                elapsed_seconds=round(elapsed, 2),
+                timeout_seconds=timeout_seconds,
             )
             await asyncio.sleep(current_interval)
             elapsed += current_interval
+            iteration += 1
 
             file_resource = await self._get_raw(name=file_resource.name)
             current_state = getattr(file_resource, "state", None)
-            logger.info("File %s status check: %s", file_resource.name, current_state)
+            logger.info(
+                "Gemini file state status check",
+                file_name=effective_name,
+                remote_name=file_resource.name,
+                current_state=str(current_state),
+                elapsed_seconds=round(elapsed, 2),
+            )
 
             if _is_active(current_state):
-                logger.info("File %s reached ACTIVE state after %.1fs.", file_resource.name, elapsed)
+                logger.info(
+                    "File reached ACTIVE state",
+                    file_name=effective_name,
+                    remote_name=file_resource.name,
+                    total_processing_seconds=round(elapsed, 2),
+                )
                 return file_resource
 
             if _is_failed(current_state):
                 error_msg = f"Gemini file processing failed for '{file_resource.name}' with state: {current_state}"
-                logger.error(error_msg)
+                logger.error(
+                    "Gemini file processing failed",
+                    file_name=effective_name,
+                    remote_name=file_resource.name,
+                    state=str(current_state),
+                )
                 raise GeminiFileProcessingError(error_msg)
 
             # Exponential backoff clamped to max_poll_interval
@@ -194,7 +237,13 @@ class GeminiFileService:
             f"File '{file_resource.name}' did not reach ACTIVE state within "
             f"{timeout_seconds} seconds (last state: {getattr(file_resource, 'state', None)})."
         )
-        logger.error(timeout_msg)
+        logger.error(
+            "Gemini file processing timed out",
+            file_name=effective_name,
+            remote_name=file_resource.name,
+            timeout_seconds=timeout_seconds,
+            last_state=str(getattr(file_resource, "state", None)),
+        )
         raise GeminiFileTimeoutError(timeout_msg)
 
     async def delete_file(self, name: str) -> None:

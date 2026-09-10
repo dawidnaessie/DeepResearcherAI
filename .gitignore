@@ -57,7 +57,13 @@ $RECYCLE.BIN/
 uploads/
 tmp/
 temp/
+
+# Structured logs, JSONL telemetry and rotated archives
+logs/
 *.log
+*.log.*
+*.jsonl
+*.zip
 
 # Distribution / packaging
 dist/
