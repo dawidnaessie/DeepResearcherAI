@@ -118,7 +118,7 @@ if analyze_button and uploaded_file is not None:
         )
     else:
         with st.spinner(
-            f"🧠 Analyzing '{uploaded_file.name}' via Gemini 2.5 Flash...\n\n"
+            f"🧠 Analyzing '{uploaded_file.name}' via Gemini 3.6 Flash...\n\n"
             "• Uploading to Gemini Files API\n"
             "• Polling file state until ACTIVE\n"
             "• Extracting Knowledge Graph, Flashcards & Timeline"
@@ -175,7 +175,7 @@ if dashboard is not None:
         <div style="background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%); padding: 24px; border-radius: 12px; border: 1px solid #3730A3; margin-bottom: 24px;">
             <span style="background: #4F46E5; color: #FFFFFF; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Synthesized Study</span>
             <h1 style="margin: 8px 0 6px 0; color: #F8FAFC; font-size: 2.1rem;">{title}</h1>
-            <p style="margin: 0; color: #94A3B8; font-size: 0.95rem;">📄 Source: <b>{source_name}</b> &nbsp;|&nbsp; 🤖 Engine: <b>Gemini 2.5 Flash</b></p>
+            <p style="margin: 0; color: #94A3B8; font-size: 0.95rem;">📄 Source: <b>{source_name}</b> &nbsp;|&nbsp; 🤖 Engine: <b>Gemini 3.6 Flash</b></p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -286,7 +286,7 @@ else:
             """
             <div style="background: #1E293B; padding: 20px; border-radius: 8px; border-top: 3px solid #F59E0B; height: 100%;">
                 <h4 style="color: #F8FAFC; margin-top: 0;">3. Synthesis</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">Gemini 2.5 Flash synthesizes the content under strict Pydantic JSON schema constraints.</p>
+                <p style="color: #94A3B8; font-size: 0.9rem;">Gemini 3.6 Flash synthesizes the content under strict Pydantic JSON schema constraints.</p>
             </div>
             """,
             unsafe_allow_html=True,

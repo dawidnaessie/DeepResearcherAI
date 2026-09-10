@@ -116,7 +116,7 @@ async def analyze_multimodal_document(
     Workflow:
     1. Persists uploaded stream to a secure temporary local file.
     2. Dispatches file to Gemini Files API and asynchronously polls until state is ACTIVE.
-    3. Triggers Gemini 2.5 Flash with strict Pydantic JSON schema enforcement.
+    3. Triggers Gemini 3.6 Flash with strict Pydantic JSON schema enforcement.
     4. Cleans up temporary local and remote files.
     5. Returns validated ResearchStudyDashboard payload.
     """

@@ -1,14 +1,14 @@
 # 🔬 Multimodal Deep Researcher
 
 > **Autonomous Multimodal Intelligence Synthesizer & Knowledge Architect**  
-> *Built with Python 3.12+, FastAPI, Google Gemini 2.5 Flash (`google-genai`), Pydantic v2, PyVis, and Streamlit.*
+> *Built with Python 3.12+, FastAPI, Google Gemini 3.6 Flash (`google-genai`), Pydantic v2, PyVis, and Streamlit.*
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B%20%7C%203.13-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Google GenAI](https://img.shields.io/badge/Google%20GenAI-2.22%2B-4285F4?style=flat&logo=google&logoColor=white)](https://github.com/googleapis/python-genai)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063?style=flat&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.63%2B-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Tests](https://img.shields.io/badge/Tests-28%20Passed-10B981?style=flat&logo=pytest&logoColor=white)](https://pytest.org/)
+[![Tests](https://img.shields.io/badge/Tests-32%20Passed-10B981?style=flat&logo=pytest&logoColor=white)](https://pytest.org/)
 
 ---
 
@@ -51,7 +51,7 @@ sequenceDiagram
     participant UI as Streamlit Frontend (:8501)
     participant API as FastAPI Backend (:8000)
     participant FilesAPI as Gemini Files API
-    participant Engine as Gemini 2.5 Flash Inference
+    participant Engine as Gemini 3.6 Flash Inference
 
     Researcher->>UI: Uploads file (PDF, MP4, MP3, TXT) & optional focus query
     UI->>API: POST /api/analyze (multipart/form-data)

@@ -1,6 +1,6 @@
 """Gemini Analysis Engine Service.
 
-Orchestrates structured intelligence extraction using Google Gemini 2.5 Flash
+Orchestrates structured intelligence extraction using Google Gemini 3.6 Flash
 and enforces strict Pydantic JSON schemas for the Research Study Dashboard.
 """
 
