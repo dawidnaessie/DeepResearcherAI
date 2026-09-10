@@ -11,6 +11,7 @@ from typing import Any
 from google import genai
 from google.genai import errors, types
 
+from src.backend.config import settings
 from src.backend.core.logger import logger
 from src.backend.schemas.dashboard import ResearchStudyDashboard
 
@@ -64,7 +65,7 @@ async def generate_study_dashboard(
     mime_type: str = "application/pdf",
     client: genai.Client | None = None,
     user_prompt: str | None = None,
-    model: str = "gemini-2.5-flash",
+    model: str | None = None,
     max_retries: int = 4,
     initial_backoff: float = 2.0,
     backoff_factor: float = 2.0,
@@ -77,7 +78,7 @@ async def generate_study_dashboard(
         mime_type: MIME type of the uploaded file.
         client: Optional genai.Client instance. If omitted, initializes default client.
         user_prompt: Optional custom research instructions or focus topics from the user.
-        model: Target Gemini model identifier (defaults to 'gemini-2.5-flash').
+        model: Target Gemini model identifier (defaults to settings.MODEL_NAME, e.g. 'gemini-3.6-flash').
         max_retries: Maximum retry attempts on HTTP 429 rate limits.
         initial_backoff: Initial wait time in seconds before retrying after a 429.
         backoff_factor: Multiplier applied to wait time on consecutive 429 responses.
@@ -90,7 +91,14 @@ async def generate_study_dashboard(
         GeminiRateLimitError: If rate limit retries are exhausted.
         GeminiAnalysisError: If inference fails or returns invalid structure.
     """
-    genai_client = client or genai.Client()
+    target_model = model or settings.MODEL_NAME
+
+    if client is not None:
+        genai_client = client
+    elif settings.GEMINI_API_KEY:
+        genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    else:
+        genai_client = genai.Client()
 
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
@@ -109,7 +117,7 @@ async def generate_study_dashboard(
     file_identifier = getattr(file_ref, "name", str(file_ref))
     logger.info(
         "Dispatching Gemini inference request",
-        model=model,
+        model=target_model,
         file_ref=file_identifier,
         prompt_preview=prompt_summary[:120],
         has_custom_prompt=bool(user_prompt),
@@ -121,7 +129,7 @@ async def generate_study_dashboard(
         try:
             logger.info(
                 "Calling Gemini generation endpoint",
-                model=model,
+                model=target_model,
                 attempt=attempt,
                 max_retries=max_retries,
             )
@@ -129,14 +137,14 @@ async def generate_study_dashboard(
             # Support both async client.aio.models and synchronous client.models
             if hasattr(genai_client, "aio") and hasattr(genai_client.aio, "models"):
                 response = await genai_client.aio.models.generate_content(
-                    model=model,
+                    model=target_model,
                     contents=contents,
                     config=config,
                 )
             else:
                 response = await asyncio.to_thread(
                     genai_client.models.generate_content,
-                    model=model,
+                    model=target_model,
                     contents=contents,
                     config=config,
                 )
@@ -144,7 +152,7 @@ async def generate_study_dashboard(
             latency_ms = round((time.perf_counter() - dispatch_start) * 1000, 2)
             logger.info(
                 "Received Gemini inference response",
-                model=model,
+                model=target_model,
                 attempt=attempt,
                 latency_ms=latency_ms,
                 response_chars=len(response.text) if response.text else 0,
@@ -171,7 +179,7 @@ async def generate_study_dashboard(
                 if attempt < max_retries:
                     logger.warning(
                         "Gemini rate limit (429) hit, retrying with exponential backoff",
-                        model=model,
+                        model=target_model,
                         attempt=attempt,
                         max_retries=max_retries,
                         backoff_seconds=delay,
@@ -182,7 +190,7 @@ async def generate_study_dashboard(
                     continue
                 logger.error(
                     "Gemini rate limit retries exhausted",
-                    model=model,
+                    model=target_model,
                     attempts_made=max_retries,
                     error=str(exc),
                 )
@@ -192,7 +200,7 @@ async def generate_study_dashboard(
 
             logger.error(
                 "Gemini dashboard generation error",
-                model=model,
+                model=target_model,
                 attempt=attempt,
                 latency_ms=latency_ms,
                 error=str(exc),

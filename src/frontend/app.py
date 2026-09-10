@@ -103,7 +103,7 @@ with st.sidebar:
             st.session_state["backend_url"] = new_url.rstrip("/")
             st.rerun()
 
-    st.caption("Powered by Google Gemini 2.5 Flash & FastAPI")
+    st.caption("Powered by Google Gemini 3.6 Flash & FastAPI")
 
 
 # --- Analysis Trigger Logic ---

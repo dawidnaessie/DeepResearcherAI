@@ -28,7 +28,7 @@ This document sets the mandatory engineering standards, SDK constraints, code qu
   # FORBIDDEN (DO NOT USE)
   import google.generativeai as genai
   ```
-* **Model References:** Target current Gemini 2.x models (e.g., `gemini-2.5-flash`, `gemini-2.5-pro`) using current SDK conventions.
+* **Model References:** Target modern Gemini models (defaulting to `gemini-3.6-flash`, or `gemini-2.5-pro` where configured) using current SDK conventions.
 
 ---
 
@@ -49,7 +49,7 @@ This document sets the mandatory engineering standards, SDK constraints, code qu
   )
 
   response = await client.aio.models.generate_content(
-      model="gemini-2.5-flash",
+      model="gemini-3.6-flash",
       contents=[uploaded_file, prompt_text],
       config=config,
   )

@@ -92,7 +92,7 @@ Tracks the asynchronous lifecycle of multimodal uploads:
 
 ### 4.3 Gemini Analysis Engine (`src/backend/services/gemini_service.py`)
 Monitors intelligence extraction:
-* **Prompt Dispatch:** Logs model identifier (`gemini-2.5-flash`), file identifier, prompt preview, and whether custom focus queries were provided.
+* **Prompt Dispatch:** Logs model identifier (`gemini-3.6-flash`), file identifier, prompt preview, and whether custom focus queries were provided.
 * **Inference Latency:** Measures and records round-trip inference response time (`latency_ms`) and returned character length.
 * **Rate Limit Retries (HTTP 429):** Logs warning on 429 responses with current attempt count, backoff duration, and latency.
 * **Schema Validation:** Logs node count, edge count, flashcard count, and timeline milestone count upon Pydantic model validation.

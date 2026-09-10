@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-The **Multimodal Deep Researcher API** exposes asynchronous endpoints for health monitoring and multimodal research analysis. The backend orchestrates file uploads to the Google Gemini Files API, safely polls for the `ACTIVE` processing state, extracts structured intelligence via `gemini-2.5-flash`, and returns a strongly validated Pydantic payload (`ResearchStudyDashboard`).
+The **Multimodal Deep Researcher API** exposes asynchronous endpoints for health monitoring and multimodal research analysis. The backend orchestrates file uploads to the Google Gemini Files API, safely polls for the `ACTIVE` processing state, extracts structured intelligence via `gemini-3.6-flash`, and returns a strongly validated Pydantic payload (`ResearchStudyDashboard`).
 
 ---
 
@@ -54,7 +54,7 @@ curl -X GET http://localhost:8000/health
 
 ### 3.2 Multimodal Research Analysis
 
-Ingests an uploaded multimodal file, uploads it to the Gemini Files API, monitors the polling loop until the file reaches `ACTIVE` status, and invokes `gemini-2.5-flash` with structured Pydantic schema validation.
+Ingests an uploaded multimodal file, uploads it to the Gemini Files API, monitors the polling loop until the file reaches `ACTIVE` status, and invokes `gemini-3.6-flash` with structured Pydantic schema validation.
 
 * **Method:** `POST`
 * **Route:** `/api/analyze`

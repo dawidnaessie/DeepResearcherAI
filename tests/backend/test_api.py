@@ -179,3 +179,14 @@ def test_analyze_endpoint_rate_limit() -> None:
         response = client.post("/api/analyze", files=files)
         assert response.status_code == 429
         assert "rate limit" in response.json()["detail"].lower()
+
+
+def test_analyze_endpoint_missing_api_key() -> None:
+    """Verify POST /api/analyze returns 500 with descriptive detail when GEMINI_API_KEY is not configured."""
+    with patch("src.backend.main.settings.GEMINI_API_KEY", None), patch.dict("os.environ", {}, clear=True):
+        files = {
+            "file": ("paper.pdf", b"data", "application/pdf")
+        }
+        response = client.post("/api/analyze", files=files)
+        assert response.status_code == 500
+        assert "GEMINI_API_KEY is not configured" in response.json()["detail"]

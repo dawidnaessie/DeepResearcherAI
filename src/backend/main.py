@@ -126,6 +126,13 @@ async def analyze_multimodal_document(
             detail="Uploaded file must have a valid filename.",
         )
 
+    if not settings.GEMINI_API_KEY and not os.environ.get("GEMINI_API_KEY"):
+        logger.error("GEMINI_API_KEY is not configured in .env or environment")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GEMINI_API_KEY is not configured. Please set a valid GEMINI_API_KEY in your .env file.",
+        )
+
     # Determine file extension and MIME type
     suffix = Path(file.filename).suffix or ".tmp"
     mime_type = file.content_type or "application/octet-stream"
@@ -150,11 +157,13 @@ async def analyze_multimodal_document(
         logger.info("Gemini file verified ACTIVE", remote_name=remote_file_name)
 
         # Step 3: Call Gemini generation engine with structured schema
-        logger.info("Initiating intelligence extraction via Gemini 2.5 Flash", remote_name=remote_file_name)
+        logger.info("Initiating intelligence extraction via Gemini model", model=settings.MODEL_NAME, remote_name=remote_file_name)
         dashboard_result = await generate_study_dashboard(
             file_ref=uploaded_resource,
             mime_type=mime_type,
             user_prompt=prompt,
+            client=file_service.client,
+            model=settings.MODEL_NAME,
         )
 
         return dashboard_result

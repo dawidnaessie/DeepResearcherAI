@@ -3,8 +3,13 @@
 Utilizes pydantic-settings to validate configuration parameters and load from .env.
 """
 
+import os
+from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Ensure .env is loaded into environment variables
+load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
@@ -21,7 +26,7 @@ class Settings(BaseSettings):
         description="Google Gemini API key required for the google-genai SDK.",
     )
     MODEL_NAME: str = Field(
-        default="gemini-2.5-flash",
+        default="gemini-3.6-flash",
         description="Default Gemini multimodal model for intelligence extraction.",
     )
     BACKEND_HOST: str = Field(
@@ -51,3 +56,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Ensure GEMINI_API_KEY is synchronized with os.environ for SDK fallbacks
+if settings.GEMINI_API_KEY:
+    os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
