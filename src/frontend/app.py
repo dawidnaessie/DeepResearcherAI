@@ -1,7 +1,9 @@
 """Streamlit interactive frontend for Multimodal Deep Researcher.
 
-Communicates with the FastAPI backend (/api/analyze) via HTTP and renders
-interactive Knowledge Graphs, active-recall Flashcards, Timelines, and Summaries.
+Implements an adaptive stateful layout:
+- State 0 (Initial): Prominent, centered Hero ingestion canvas on the main viewport.
+- State 1 (Post-Processing): File uploader migrates to the sidebar; main canvas showcases
+  the multi-tab analytical study dashboard (Knowledge Graph, Flashcards, Timeline, Summary).
 """
 
 import os
@@ -15,7 +17,7 @@ from src.frontend.components.visualizers import (
     render_timeline,
 )
 
-# Page Configuration
+# --- Page Configuration ---
 st.set_page_config(
     page_title="Multimodal Deep Researcher",
     page_icon="🔬",
@@ -23,10 +25,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Default backend configuration
+# Backend URL configuration
 DEFAULT_BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
-# Initialize session state variables
+# --- Session State Initialization ---
+if "has_data" not in st.session_state:
+    st.session_state["has_data"] = False
 if "dashboard_data" not in st.session_state:
     st.session_state["dashboard_data"] = None
 if "analyzed_filename" not in st.session_state:
@@ -44,144 +48,304 @@ def check_backend_health(url: str) -> bool:
         return False
 
 
-# --- Sidebar ---
-with st.sidebar:
-    st.markdown(
-        """
-        <div style="text-align: center; margin-bottom: 16px;">
-            <h2 style="margin: 0; color: #6366F1;">🔬 Deep Researcher</h2>
-            <p style="color: #94A3B8; font-size: 0.85rem; margin: 4px 0 0 0;">Autonomous Multimodal Intelligence</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Backend Connectivity Indicator
-    backend_online = check_backend_health(st.session_state["backend_url"])
-    if backend_online:
-        st.success("🟢 Backend Connected", icon="✅")
-    else:
-        st.warning(
-            "🔴 Backend Offline\n\nStart backend via:\n`uvicorn src.backend.main:app --reload --port 8000`",
-            icon="⚠️",
-        )
-
-    st.divider()
-
-    st.markdown("### 📤 Upload Research Material")
-    uploaded_file = st.file_uploader(
-        "Choose a multimodal file",
-        type=["pdf", "mp4", "mp3", "txt"],
-        help="Upload an academic paper, audio lecture, video recording, or text notes.",
-    )
-
-    custom_prompt = st.text_area(
-        "🎯 Research Focus (Optional)",
-        placeholder="e.g. Focus on experimental methodologies, theoretical foundations, and numerical error thresholds...",
-        help="Provide specific questions or focal themes to steer the synthesis.",
-        height=100,
-    )
-
-    analyze_button = st.button(
-        "🚀 Synthesize Research",
-        type="primary",
-        use_container_width=True,
-        disabled=uploaded_file is None,
-    )
-
-    if st.session_state["dashboard_data"] is not None:
-        if st.button("🔄 Reset Dashboard", use_container_width=True):
-            st.session_state["dashboard_data"] = None
-            st.session_state["analyzed_filename"] = None
-            st.rerun()
-
-    st.divider()
-
-    with st.expander("⚙️ Connection Settings", expanded=False):
-        new_url = st.text_input("Backend API URL", value=st.session_state["backend_url"])
-        if new_url != st.session_state["backend_url"]:
-            st.session_state["backend_url"] = new_url.rstrip("/")
-            st.rerun()
-
-    st.caption("Powered by Google Gemini 3.6 Flash & FastAPI")
-
-
-# --- Analysis Trigger Logic ---
-if analyze_button and uploaded_file is not None:
-    backend_url = st.session_state["backend_url"]
-
-    # Verify backend connectivity first
+def execute_synthesis(uploaded_file: Any, custom_prompt: str, backend_url: str) -> None:
+    """Send uploaded file and prompt to the FastAPI backend and update session state."""
     if not check_backend_health(backend_url):
         st.error(
             f"❌ Unable to connect to backend at `{backend_url}`. "
             "Please ensure the FastAPI service is running: `uvicorn src.backend.main:app --port 8000`"
         )
-    else:
-        with st.spinner(
-            f"🧠 Analyzing '{uploaded_file.name}' via Gemini 3.6 Flash...\n\n"
-            "• Uploading to Gemini Files API\n"
-            "• Polling file state until ACTIVE\n"
-            "• Extracting Knowledge Graph, Flashcards & Timeline"
-        ):
-            try:
-                # Prepare multipart/form-data payload
-                files = {
-                    "file": (
-                        uploaded_file.name,
-                        uploaded_file.getvalue(),
-                        uploaded_file.type or "application/octet-stream",
-                    )
-                }
-                data = {"prompt": custom_prompt} if custom_prompt else {}
+        return
 
-                response = requests.post(
-                    f"{backend_url}/api/analyze",
-                    files=files,
-                    data=data,
-                    timeout=300,  # 5-minute timeout for large videos/PDFs
+    with st.spinner(
+        f"🧠 Analyzing '{uploaded_file.name}' via Gemini 3.6 Flash...\n\n"
+        "• Uploading to Gemini Files API\n"
+        "• Polling file state until ACTIVE\n"
+        "• Synthesizing Knowledge Graph, Flashcards & Timeline"
+    ):
+        try:
+            files = {
+                "file": (
+                    uploaded_file.name,
+                    uploaded_file.getvalue(),
+                    uploaded_file.type or "application/octet-stream",
                 )
+            }
+            data = {"prompt": custom_prompt.strip()} if custom_prompt.strip() else {}
 
-                if response.status_code == 200:
-                    st.session_state["dashboard_data"] = response.json()
-                    st.session_state["analyzed_filename"] = uploaded_file.name
-                    st.toast("✅ Intelligence synthesis complete!", icon="🎉")
-                    st.rerun()
-                elif response.status_code == 429:
-                    st.error("⏳ Rate limit reached on Gemini API. Please wait a minute and retry.")
-                elif response.status_code == 504:
-                    st.error("⏱️ Gateway Timeout: File processing took longer than expected on Gemini's servers.")
-                else:
-                    detail = response.json().get("detail", response.text)
-                    st.error(f"❌ Analysis failed (HTTP {response.status_code}): {detail}")
+            response = requests.post(
+                f"{backend_url}/api/analyze",
+                files=files,
+                data=data,
+                timeout=300,  # 5-minute timeout for large videos/PDFs
+            )
 
-            except requests.exceptions.ConnectionError:
-                st.error(f"❌ Failed to reach backend at `{backend_url}`. Check server terminal.")
-            except requests.exceptions.Timeout:
-                st.error("⏱️ Request timed out after 300 seconds.")
-            except Exception as exc:
-                st.error(f"❌ Unexpected error occurred: {exc}")
+            if response.status_code == 200:
+                st.session_state["dashboard_data"] = response.json()
+                st.session_state["analyzed_filename"] = uploaded_file.name
+                st.session_state["has_data"] = True
+                st.toast("✅ Intelligence synthesis complete!", icon="🎉")
+                st.rerun()
+            elif response.status_code == 429:
+                st.error("⏳ Rate limit reached on Gemini API. Please wait a minute and retry.")
+            elif response.status_code == 504:
+                st.error("⏱️ Gateway Timeout: File processing took longer than expected on Gemini's servers.")
+            else:
+                detail = response.json().get("detail", response.text)
+                st.error(f"❌ Analysis failed (HTTP {response.status_code}): {detail}")
+
+        except requests.exceptions.ConnectionError:
+            st.error(f"❌ Failed to reach backend at `{backend_url}`. Check server terminal.")
+        except requests.exceptions.Timeout:
+            st.error("⏱️ Request timed out after 300 seconds.")
+        except Exception as exc:
+            st.error(f"❌ Unexpected error occurred: {exc}")
 
 
-# --- Main Dashboard Render ---
-dashboard: dict[str, Any] | None = st.session_state.get("dashboard_data")
+def reset_dashboard() -> None:
+    """Clear analysis data and return to State 0."""
+    st.session_state["dashboard_data"] = None
+    st.session_state["analyzed_filename"] = None
+    st.session_state["has_data"] = False
+    st.rerun()
 
-if dashboard is not None:
-    title = dashboard.get("title", "Research Study Synthesis")
-    source_name = st.session_state.get("analyzed_filename", "Uploaded Material")
 
-    # Header section
+# ==============================================================================
+# STATE 0: INITIAL (HERO CENTRIC VIEWPORT)
+# ==============================================================================
+if not st.session_state.get("has_data", False) or st.session_state.get("dashboard_data") is None:
+
+    # Minimal diagnostic sidebar in State 0
+    with st.sidebar:
+        st.markdown(
+            """
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #8B5CF6; font-size: 1.5rem;">🔬 Deep Researcher</h2>
+                <p style="color: #94A3B8; font-size: 0.82rem; margin: 4px 0 0 0;">Autonomous Multimodal Intelligence</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        backend_online = check_backend_health(st.session_state["backend_url"])
+        if backend_online:
+            st.success("🟢 Backend Connected", icon="✅")
+        else:
+            st.warning(
+                "🔴 Backend Offline\n\nStart backend via:\n`uvicorn src.backend.main:app --reload --port 8000`",
+                icon="⚠️",
+            )
+
+        st.divider()
+
+        with st.expander("⚙️ Connection Settings", expanded=False):
+            new_url = st.text_input("Backend API URL", value=st.session_state["backend_url"], key="state0_backend_url")
+            if new_url != st.session_state["backend_url"]:
+                st.session_state["backend_url"] = new_url.rstrip("/")
+                st.rerun()
+
+        st.caption("Powered by Google Gemini 3.6 Flash & FastAPI")
+
+    # Main Centered Hero Viewport
     st.markdown(
-        f"""
-        <div style="background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%); padding: 24px; border-radius: 12px; border: 1px solid #3730A3; margin-bottom: 24px;">
-            <span style="background: #4F46E5; color: #FFFFFF; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Synthesized Study</span>
-            <h1 style="margin: 8px 0 6px 0; color: #F8FAFC; font-size: 2.1rem;">{title}</h1>
-            <p style="margin: 0; color: #94A3B8; font-size: 0.95rem;">📄 Source: <b>{source_name}</b> &nbsp;|&nbsp; 🤖 Engine: <b>Gemini 3.6 Flash</b></p>
+        """
+        <div style="text-align: center; padding: 32px 16px 20px 16px; max-width: 900px; margin: 0 auto;">
+            <span style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); color: #C4B5FD; font-size: 0.8rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;">
+                Gemini 3.6 Flash Multi-Tier Engine
+            </span>
+            <h1 style="color: #F8FAFC; font-size: 3rem; font-weight: 800; margin: 16px 0 10px 0; letter-spacing: -0.02em;">
+                🔬 Multimodal Deep Researcher
+            </h1>
+            <p style="color: #94A3B8; font-size: 1.15rem; line-height: 1.6; max-width: 720px; margin: 0 auto 24px auto;">
+                Autonomous research synthesis engine. Decompose academic manuscripts, video lectures, and technical audio into interactive 
+                <b style="color: #A78BFA;">Knowledge Graphs</b>, <b style="color: #38BDF8;">Active-Recall Flashcards</b>, and <b style="color: #34D399;">Chronological Milestones</b>.
+            </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # Tabs navigation
+    # Hero Center Upload Card
+    hero_col_left, hero_col_center, hero_col_right = st.columns([1, 6, 1])
+    with hero_col_center:
+        st.markdown(
+            """
+            <div style="background: #131C31; border: 1px solid #1E293B; border-radius: 14px; padding: 24px 28px 12px 28px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="margin: 0; color: #F8FAFC; font-size: 1.25rem;">📤 Ingest Research Asset</h3>
+                    <div style="display: flex; gap: 8px;">
+                        <span style="background: #1E293B; color: #94A3B8; font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">PDF</span>
+                        <span style="background: #1E293B; color: #94A3B8; font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">MP4</span>
+                        <span style="background: #1E293B; color: #94A3B8; font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">MP3</span>
+                        <span style="background: #1E293B; color: #94A3B8; font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">TXT</span>
+                    </div>
+                </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        hero_uploaded_file = st.file_uploader(
+            "Upload research document, lecture video, audio, or notes",
+            type=["pdf", "mp4", "mp3", "txt"],
+            help="Select an academic paper, symposium presentation, audio lecture, or notes.",
+            key="hero_uploader",
+            label_visibility="collapsed",
+        )
+
+        hero_custom_prompt = st.text_area(
+            "🎯 Research Focus & Queries (Optional)",
+            placeholder="e.g. Focus on theoretical frameworks, experimental methodologies, error thresholds, and causal mechanisms...",
+            help="Provide specific inquiries or themes to steer the synthesis.",
+            height=90,
+            key="hero_prompt",
+        )
+
+        hero_analyze_btn = st.button(
+            "🚀 Synthesize Research",
+            type="primary",
+            use_container_width=True,
+            disabled=hero_uploaded_file is None,
+            key="hero_btn",
+        )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        if hero_analyze_btn and hero_uploaded_file is not None:
+            execute_synthesis(hero_uploaded_file, hero_custom_prompt, st.session_state["backend_url"])
+
+    # Capabilities Row Below Hero
+    st.markdown("<br/>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(
+            """
+            <div style="background: #131C31; padding: 20px; border-radius: 10px; border-top: 3px solid #8B5CF6; border-left: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; height: 100%;">
+                <h4 style="color: #F8FAFC; margin: 0 0 8px 0; font-size: 1.05rem;">🧠 Knowledge Graph</h4>
+                <p style="color: #94A3B8; font-size: 0.88rem; line-height: 1.5; margin: 0;">Force-directed topological network of concepts and causal relationships with interactive physics.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown(
+            """
+            <div style="background: #131C31; padding: 20px; border-radius: 10px; border-top: 3px solid #10B981; border-left: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; height: 100%;">
+                <h4 style="color: #F8FAFC; margin: 0 0 8px 0; font-size: 1.05rem;">🗂️ Active Flashcards</h4>
+                <p style="color: #94A3B8; font-size: 0.88rem; line-height: 1.5; margin: 0;">Spaced-repetition study units with difficulty tags, conceptual probes, and exact source citations.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            """
+            <div style="background: #131C31; padding: 20px; border-radius: 10px; border-top: 3px solid #F59E0B; border-left: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; height: 100%;">
+                <h4 style="color: #F8FAFC; margin: 0 0 8px 0; font-size: 1.05rem;">⏳ Chrono Timeline</h4>
+                <p style="color: #94A3B8; font-size: 0.88rem; line-height: 1.5; margin: 0;">Sequential progression of discoveries, experimental phases, and quantified milestone significance.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c4:
+        st.markdown(
+            """
+            <div style="background: #131C31; padding: 20px; border-radius: 10px; border-top: 3px solid #EC4899; border-left: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; height: 100%;">
+                <h4 style="color: #F8FAFC; margin: 0 0 8px 0; font-size: 1.05rem;">📑 Executive Brief</h4>
+                <p style="color: #94A3B8; font-size: 0.88rem; line-height: 1.5; margin: 0;">Incisive high-impact findings, core theses, and experimental takeaways extracted with academic rigor.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+# ==============================================================================
+# STATE 1: POST-PROCESSING (WORKSPACE DASHBOARD VIEWPORT)
+# ==============================================================================
+else:
+    dashboard: dict[str, Any] = st.session_state["dashboard_data"]
+    title = dashboard.get("title", "Research Study Synthesis")
+    source_name = st.session_state.get("analyzed_filename", "Uploaded Asset")
+
+    # In State 1, the file uploader relocates to the left sidebar for continuous research
+    with st.sidebar:
+        st.markdown(
+            """
+            <div style="text-align: center; margin-bottom: 16px;">
+                <h2 style="margin: 0; color: #8B5CF6; font-size: 1.4rem;">🔬 Deep Researcher</h2>
+                <p style="color: #94A3B8; font-size: 0.82rem; margin: 4px 0 0 0;">Autonomous Multimodal Intelligence</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        backend_online = check_backend_health(st.session_state["backend_url"])
+        if backend_online:
+            st.success("🟢 Backend Connected", icon="✅")
+        else:
+            st.warning("🔴 Backend Offline", icon="⚠️")
+
+        st.divider()
+
+        # Reset action button to return to State 0
+        if st.button("🔄 New / Reset Analysis", use_container_width=True):
+            reset_dashboard()
+
+        st.divider()
+
+        # Relocated File Ingestion for subsequent studies
+        st.markdown("### 📤 Ingest Next Asset")
+        sidebar_file = st.file_uploader(
+            "Upload new material",
+            type=["pdf", "mp4", "mp3", "txt"],
+            help="Ingest another document, symposium video, or audio track.",
+            key="sidebar_uploader",
+        )
+
+        sidebar_prompt = st.text_area(
+            "🎯 Research Focus (Optional)",
+            placeholder="e.g. Focus on theoretical derivations...",
+            help="Custom inquiries for the new document.",
+            height=85,
+            key="sidebar_prompt",
+        )
+
+        sidebar_analyze_btn = st.button(
+            "🚀 Re-Synthesize",
+            type="primary",
+            use_container_width=True,
+            disabled=sidebar_file is None,
+            key="sidebar_btn",
+        )
+
+        if sidebar_analyze_btn and sidebar_file is not None:
+            execute_synthesis(sidebar_file, sidebar_prompt, st.session_state["backend_url"])
+
+        st.divider()
+
+        with st.expander("⚙️ Connection Settings", expanded=False):
+            new_url = st.text_input("Backend API URL", value=st.session_state["backend_url"], key="state1_backend_url")
+            if new_url != st.session_state["backend_url"]:
+                st.session_state["backend_url"] = new_url.rstrip("/")
+                st.rerun()
+
+        st.caption("Powered by Google Gemini 3.6 Flash & FastAPI")
+
+    # Main Workspace Dashboard
+    st.markdown(
+        f"""
+        <div style="background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%); padding: 24px 28px; border-radius: 14px; border: 1px solid #3730A3; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="background: #4F46E5; color: #FFFFFF; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;">Synthesized Study</span>
+                <span style="color: #94A3B8; font-size: 0.85rem;">🤖 Engine: <b style="color: #C4B5FD;">Gemini 3.6 Flash</b></span>
+            </div>
+            <h1 style="margin: 6px 0 10px 0; color: #F8FAFC; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.01em;">{title}</h1>
+            <p style="margin: 0; color: #94A3B8; font-size: 0.95rem;">📄 Source: <b style="color: #E2E8F0;">{source_name}</b></p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Analytical Tabs
     tab_summary, tab_mindmap, tab_flashcards, tab_timeline = st.tabs(
         [
             "📑 Executive Summary",
@@ -206,7 +370,7 @@ if dashboard is not None:
                 for idx, finding in enumerate(findings, start=1):
                     st.markdown(
                         f"""
-                        <div style="background: #1E293B; border-left: 4px solid #10B981; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95rem; color: #F1F5F9;">
+                        <div style="background: #131C31; border-left: 4px solid #10B981; border-top: 1px solid #1E293B; border-right: 1px solid #1E293B; border-bottom: 1px solid #1E293B; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.95rem; color: #F1F5F9; line-height: 1.5;">
                             <b>{idx}.</b> {finding}
                         </div>
                         """,
@@ -215,8 +379,7 @@ if dashboard is not None:
             else:
                 st.info("No explicit key findings extracted.")
 
-            # Quick stats container
-            st.markdown("### 📊 Metrics")
+            st.markdown("### 📊 Metrics Overview")
             m1, m2 = st.columns(2)
             with m1:
                 st.metric("Concepts", len(dashboard.get("nodes", [])))
@@ -233,7 +396,7 @@ if dashboard is not None:
         st.markdown(
             f"### 🧠 Conceptual Knowledge Graph ({len(nodes)} concepts, {len(edges)} connections)"
         )
-        render_mind_map(nodes=nodes, edges=edges, height="680px")
+        render_mind_map(nodes=nodes, edges=edges, height="700px")
 
     # --- Tab 3: Flashcards ---
     with tab_flashcards:
@@ -244,63 +407,3 @@ if dashboard is not None:
     with tab_timeline:
         timeline_events = dashboard.get("timeline", [])
         render_timeline(timeline_events=timeline_events)
-
-else:
-    # --- Empty State Welcome View ---
-    st.markdown(
-        """
-        <div style="text-align: center; padding: 60px 20px; max-width: 800px; margin: 0 auto;">
-            <h1 style="color: #6366F1; font-size: 3rem; margin-bottom: 12px;">🔬 Multimodal Deep Researcher</h1>
-            <p style="color: #94A3B8; font-size: 1.25rem; line-height: 1.6; margin-bottom: 32px;">
-                Transform complex academic papers, audio lectures, and video presentations into interactive 
-                <b>Knowledge Graphs</b>, <b>Active-Recall Flashcards</b>, and <b>Chronological Timelines</b>.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(
-            """
-            <div style="background: #1E293B; padding: 20px; border-radius: 8px; border-top: 3px solid #6366F1; height: 100%;">
-                <h4 style="color: #F8FAFC; margin-top: 0;">1. Upload</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">Drop a PDF research paper, MP4 video, MP3 audio lecture, or text notes into the sidebar.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.markdown(
-            """
-            <div style="background: #1E293B; padding: 20px; border-radius: 8px; border-top: 3px solid #10B981; height: 100%;">
-                <h4 style="color: #F8FAFC; margin-top: 0;">2. Gemini Polling</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">Files are ingested into the Gemini Files API and polled asynchronously until ACTIVE.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c3:
-        st.markdown(
-            """
-            <div style="background: #1E293B; padding: 20px; border-radius: 8px; border-top: 3px solid #F59E0B; height: 100%;">
-                <h4 style="color: #F8FAFC; margin-top: 0;">3. Synthesis</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">Gemini 3.6 Flash synthesizes the content under strict Pydantic JSON schema constraints.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c4:
-        st.markdown(
-            """
-            <div style="background: #1E293B; padding: 20px; border-radius: 8px; border-top: 3px solid #EC4899; height: 100%;">
-                <h4 style="color: #F8FAFC; margin-top: 0;">4. Interactive UI</h4>
-                <p style="color: #94A3B8; font-size: 0.9rem;">Explore the interactive Force-Directed Mind Map, flip flashcards, and chronological timeline.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("<br/><br/>", unsafe_allow_html=True)
-    st.info("👈 **Get Started:** Upload a research document in the sidebar to begin analysis.")
