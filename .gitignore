@@ -1,0 +1,66 @@
+# Environment variables and API keys
+.env
+.env.*
+*.env
+!*.env.example
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions
+*.obj
+*.dll
+*.dylib
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing and code coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Type checking and linting
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# IDEs, Editors & OS metadata
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Streamlit runtime and local secrets
+.streamlit/secrets.toml
+
+# Temporary uploads and research scratch files
+uploads/
+tmp/
+temp/
+*.log
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
