@@ -78,7 +78,7 @@ sequenceDiagram
 
 1. **Ingestion & Streaming:** The client uploads files up to several gigabytes via the Streamlit sidebar. The stream is forwarded to the FastAPI backend at `/api/analyze`.
 2. **Gemini Ingestion & Asynchronous Polling:** The file is registered with the Google Gemini Files API. Because video, audio, and large document parsing involves remote optical and acoustic ingestion, the backend executes an asynchronous polling loop with exponential backoff, holding generation until the file enters the `ACTIVE` state.
-3. **Structured Generation:** Inference is executed against `gemini-2.5-flash` using `GenerateContentConfig(response_mime_type="application/json", response_schema=ResearchStudyDashboard)`. The model is guided by an academic synthesizer system prompt to extract deep causal relationships rather than superficial summaries.
+3. **Structured Generation:** Inference is executed against `gemini-3.6-flash` using `GenerateContentConfig(response_mime_type="application/json", response_schema=ResearchStudyDashboard)`. The model is guided by an academic synthesizer system prompt to extract deep causal relationships rather than superficial summaries.
 4. **Resource Sanitization:** On completion or failure, the backend cleans up both the local temporary disk buffer and the remote Gemini Files resource (`client.files.delete`).
 5. **Interactive Visualization:** The frontend stores the validated payload in `st.session_state` and renders force-directed physics graphs via **PyVis**, active-recall flashcards with flip expanders, and vertical timeline trees.
 

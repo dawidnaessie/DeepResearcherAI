@@ -28,7 +28,7 @@ This document sets the mandatory engineering standards, SDK constraints, code qu
   # FORBIDDEN (DO NOT USE)
   import google.generativeai as genai
   ```
-* **Model References:** Target modern Gemini models (defaulting to `gemini-3.6-flash`, or `gemini-2.5-pro` where configured) using current SDK conventions.
+* **Model References:** Target modern Gemini models (defaulting to `gemini-3.6-flash`, or other frontier models where configured) using current SDK conventions.
 
 ---
 

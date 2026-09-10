@@ -66,13 +66,14 @@ def render_mind_map(
         unsafe_allow_html=True,
     )
 
-    # Initialize PyVis network with dark modern theme
+    # Initialize PyVis network with dark modern theme and CDN assets
     net = Network(
         height=height,
         width="100%",
         bgcolor="#0F172A",
         font_color="#F8FAFC",
         directed=True,
+        cdn_resources="remote",
     )
 
     # Configure physics for smooth force-directed organic layout

@@ -70,3 +70,6 @@ dist/
 build/
 *.egg-info/
 *.egg
+
+# PyVis standalone library assets
+lib/

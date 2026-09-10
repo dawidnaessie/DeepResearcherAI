@@ -26,7 +26,7 @@ The **Multimodal Deep Researcher** frontend ([`src/frontend/app.py`](file:///c:/
                    │
                    ▼
    ┌────────────────────────────────┐
-   │      Gemini 2.5 Flash API      │
+   │      Gemini 3.6 Flash API      │
    │   (Files API + Polling Loop)   │
    └────────────────────────────────┘
 ```
