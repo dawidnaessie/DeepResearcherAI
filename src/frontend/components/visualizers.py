@@ -76,7 +76,7 @@ def render_mind_map(
         cdn_resources="remote",
     )
 
-    # Configure physics for smooth force-directed organic layout
+    # Configure physics for spacious, non-overlapping force-directed layout
     net.set_options(
         """
         {
@@ -85,56 +85,69 @@ def render_mind_map(
             "borderWidthSelected": 4,
             "font": {
               "color": "#F8FAFC",
-              "size": 14,
-              "face": "system-ui, -apple-system, sans-serif"
+              "size": 13,
+              "face": "system-ui, -apple-system, sans-serif",
+              "strokeWidth": 3,
+              "strokeColor": "#0F172A"
             },
             "shadow": {
               "enabled": true,
-              "color": "rgba(0,0,0,0.5)",
-              "size": 10
+              "color": "rgba(0,0,0,0.6)",
+              "size": 12
             }
           },
           "edges": {
             "color": {
-              "color": "#64748B",
+              "color": "rgba(100, 116, 139, 0.7)",
               "highlight": "#38BDF8",
               "hover": "#38BDF8"
             },
             "font": {
-              "color": "#CBD5E1",
+              "color": "#E2E8F0",
               "size": 11,
-              "align": "middle",
-              "background": "#1E293B"
+              "align": "horizontal",
+              "background": "#0F172A",
+              "strokeWidth": 2,
+              "strokeColor": "#0F172A"
             },
             "smooth": {
-              "type": "continuous",
-              "roundness": 0.3
+              "type": "curvedCW",
+              "roundness": 0.2
             },
             "arrows": {
               "to": {
                 "enabled": true,
-                "scaleFactor": 0.8
+                "scaleFactor": 0.9
               }
             }
           },
           "physics": {
-            "barnesHut": {
-              "gravitationalConstant": -4000,
-              "centralGravity": 0.3,
-              "springLength": 130,
+            "forceAtlas2Based": {
+              "gravitationalConstant": -160,
+              "centralGravity": 0.008,
+              "springLength": 260,
               "springConstant": 0.04,
-              "damping": 0.09
+              "damping": 0.88,
+              "avoidOverlap": 1.0
             },
+            "solver": "forceAtlas2Based",
             "minVelocity": 0.75,
             "stabilization": {
-              "iterations": 150
+              "enabled": true,
+              "iterations": 250,
+              "updateInterval": 25
             }
           },
           "interaction": {
             "hover": true,
-            "tooltipDelay": 200,
+            "tooltipDelay": 150,
             "navigationButtons": true,
-            "keyboard": true
+            "keyboard": true,
+            "multiselect": true,
+            "zoomView": true
+          },
+          "layout": {
+            "improvedLayout": true
           }
         }
         """

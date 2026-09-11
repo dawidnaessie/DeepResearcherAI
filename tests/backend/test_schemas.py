@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.backend.schemas.dashboard import (
+    ExecutiveSummary,
     Flashcard,
     MindMapEdge,
     MindMapNode,
@@ -16,6 +17,21 @@ from src.backend.schemas.dashboard import (
     ResearchStudyDashboard,
     TimelineEvent,
 )
+
+
+def test_executive_summary_instantiation() -> None:
+    """Test structured ExecutiveSummary model fields and serialization."""
+    summary = ExecutiveSummary(
+        overview="High-level synthesis of quantum algorithms.",
+        core_objectives=["Achieve quantum supremacy", "Minimize gate errors"],
+        methodology="Variational Quantum Eigensolver evaluated on 127-qubit QPUs.",
+        primary_conclusions=["Demonstrated 4x circuit depth improvement.", "Error mitigation is viable."],
+    )
+    assert summary.overview.startswith("High-level")
+    assert len(summary.core_objectives) == 2
+    assert "Variational" in summary.methodology
+    assert len(summary.primary_conclusions) == 2
+
 
 
 def test_mind_map_node_instantiation() -> None:

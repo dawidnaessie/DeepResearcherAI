@@ -20,9 +20,13 @@ Your mission is to perform deep, rigorous multimodal analysis of the provided ma
 
 Analyze the uploaded material with academic precision and adhere to the following directives:
 
-1. Executive Summary & Key Findings:
-   - Provide an incisive, multi-paragraph executive summary synthesizing core theses, breakthroughs, mechanisms, and conclusions.
-   - Extract high-impact, specific key findings, noting quantitative metrics and experimental data where present.
+1. Structured Executive Summary & Key Findings:
+   - executive_summary:
+     * overview: Provide an incisive narrative overview synthesizing core theses, breakthroughs, background, and essential subject matter.
+     * core_objectives: List explicit scientific, technical, or research objectives addressed by the material.
+     * methodology: Detail the theoretical frameworks, experimental methods, algorithmic designs, benchmarks, or analytical models utilized.
+     * primary_conclusions: Extract concrete validated conclusions, major breakthroughs, practical implications, and open challenges.
+   - key_findings: Extract high-impact, specific key findings, emphasizing quantitative metrics and experimental data where present.
 
 2. Conceptual Mind Map:
    - Identify fundamental core themes, theoretical frameworks, methodologies, and specific discoveries.

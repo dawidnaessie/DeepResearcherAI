@@ -12,6 +12,7 @@ import requests
 import streamlit as st
 
 from src.frontend.components.visualizers import (
+    _get_val,
     render_flashcards,
     render_mind_map,
     render_timeline,
@@ -360,8 +361,75 @@ else:
         col1, col2 = st.columns([2, 1])
 
         with col1:
-            st.markdown("### 📝 Executive Summary")
-            st.markdown(dashboard.get("executive_summary", "No executive summary provided."))
+            exec_summary = dashboard.get("executive_summary", {})
+            if isinstance(exec_summary, str):
+                st.markdown("### 📝 Research Overview")
+                st.markdown(
+                    f"""
+                    <div style="background: #131C31; border: 1px solid #1E293B; border-radius: 10px; padding: 18px 22px; font-size: 0.98rem; color: #E2E8F0; line-height: 1.6; margin-bottom: 20px;">
+                        {exec_summary}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                # 1. Overview
+                overview_text = _get_val(exec_summary, "overview", "")
+                if overview_text:
+                    st.markdown("### 📝 Research Overview")
+                    st.markdown(
+                        f"""
+                        <div style="background: #131C31; border: 1px solid #1E293B; border-radius: 10px; padding: 18px 22px; font-size: 0.98rem; color: #E2E8F0; line-height: 1.6; margin-bottom: 20px;">
+                            {overview_text}
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                # 2. Core Objectives
+                objectives = _get_val(exec_summary, "core_objectives", [])
+                if objectives:
+                    st.markdown("### 🎯 Core Objectives")
+                    for obj in objectives:
+                        st.markdown(
+                            f"""
+                            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; background: #131C31; border: 1px solid #1E293B; border-radius: 8px; padding: 10px 14px;">
+                                <span style="color: #8B5CF6; font-size: 1.1rem; line-height: 1.4;">▪</span>
+                                <span style="color: #F1F5F9; font-size: 0.95rem; line-height: 1.5;">{obj}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
+
+                # 3. Methodology & Technical Frameworks
+                methodology_text = _get_val(exec_summary, "methodology", "")
+                if methodology_text:
+                    st.markdown("### 🔬 Methodology & Frameworks")
+                    st.markdown(
+                        f"""
+                        <div style="background: #131C31; border: 1px solid #1E293B; border-left: 4px solid #38BDF8; border-radius: 8px; padding: 16px 20px; font-size: 0.95rem; color: #E2E8F0; line-height: 1.6; margin-bottom: 20px;">
+                            {methodology_text}
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                # 4. Primary Conclusions
+                conclusions = _get_val(exec_summary, "primary_conclusions", [])
+                if conclusions:
+                    st.markdown("### 🏁 Primary Conclusions")
+                    for conc in conclusions:
+                        st.markdown(
+                            f"""
+                            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; background: #131C31; border: 1px solid #1E293B; border-radius: 8px; padding: 10px 14px;">
+                                <span style="color: #10B981; font-size: 1.1rem; line-height: 1.4;">✔</span>
+                                <span style="color: #F1F5F9; font-size: 0.95rem; line-height: 1.5;">{conc}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
 
         with col2:
             st.markdown("### 🎯 Key Findings & Insights")

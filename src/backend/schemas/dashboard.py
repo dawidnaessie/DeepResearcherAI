@@ -3,8 +3,8 @@
 Designed for Gemini structured output schema extraction and FastAPI validation.
 """
 
-from typing import Literal
-from pydantic import BaseModel, Field
+from typing import Any, Literal
+from pydantic import BaseModel, Field, field_validator
 
 
 class MindMapNode(BaseModel):
@@ -109,6 +109,27 @@ class TimelineEvent(BaseModel):
     )
 
 
+class ExecutiveSummary(BaseModel):
+    """Structured executive summary component providing a multi-dimensional synthesis."""
+
+    overview: str = Field(
+        ...,
+        description="Comprehensive narrative overview synthesizing core theses, background, and essential subject matter.",
+    )
+    core_objectives: list[str] = Field(
+        default_factory=list,
+        description="Key scientific, technical, or research objectives addressed by the material.",
+    )
+    methodology: str = Field(
+        ...,
+        description="Detailed breakdown of theoretical frameworks, experimental methods, algorithms, or analytical models utilized.",
+    )
+    primary_conclusions: list[str] = Field(
+        default_factory=list,
+        description="High-impact conclusions, validated outcomes, and final implications of the research.",
+    )
+
+
 class ResearchStudyDashboard(BaseModel):
     """Root container schema representing the complete synthesized research study dashboard."""
 
@@ -116,9 +137,9 @@ class ResearchStudyDashboard(BaseModel):
         ...,
         description="Overarching title of the research study synthesis.",
     )
-    executive_summary: str = Field(
+    executive_summary: ExecutiveSummary = Field(
         ...,
-        description="Thorough executive summary synthesizing key arguments, discoveries, and context across all multimodal files.",
+        description="Structured multi-section executive summary synthesizing narrative overview, objectives, methodology, and conclusions.",
     )
     key_findings: list[str] = Field(
         default_factory=list,
@@ -140,6 +161,19 @@ class ResearchStudyDashboard(BaseModel):
         default_factory=list,
         description="Chronological or phase-based sequence of events and breakthroughs.",
     )
+
+    @field_validator("executive_summary", mode="before")
+    @classmethod
+    def _coerce_executive_summary(cls, v: Any) -> Any:
+        """Coerce legacy string summaries into structured ExecutiveSummary instance."""
+        if isinstance(v, str):
+            return ExecutiveSummary(
+                overview=v,
+                core_objectives=[],
+                methodology="Extracted from source material narrative.",
+                primary_conclusions=[],
+            )
+        return v
 
 
 # Alias for compatibility with architecture specification
